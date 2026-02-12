@@ -39,8 +39,15 @@ def load_training_data() -> pd.DataFrame:
 def main():
     df = load_training_data()
 
+# Convert pandas NA to numpy NaN
+    df = df.replace({pd.NA: None})
+
+# Drop rows where target is missing
+    df = df.dropna(subset=["admitted"])
+
     X = df.drop(columns=["admitted"])
     y = df["admitted"].astype(int)
+
 
     # Split (simple random split for now; later we can do time-based split)
     X_train, X_test, y_train, y_test = train_test_split(
