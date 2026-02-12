@@ -38,7 +38,6 @@ def validate_schema(df: pd.DataFrame) -> None:
 
 
 def standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
-    # Convert to snake_case for professional code consistency
     rename_map = {
         "Patient Id": "patient_id",
         "Patient Admission Date": "admission_date",
@@ -48,7 +47,7 @@ def standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
         "Patient Age": "age",
         "Patient Race": "race",
         "Department Referral": "department",
-        "Patient Admission Flag": "admitted",
+        "Patient Admission Flag": "admitted_raw",
         "Patient Satisfaction Score": "satisfaction_score",
         "Patient Waittime": "wait_time_minutes",
     }
@@ -75,6 +74,33 @@ def parse_datetimes(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def map_admission_flag(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Map the raw admission flag values to binary 0/1.
+
+    Raw values confirmed from your dataset:
+      - "Admission" -> 1
+      - "Not Admission" -> 0
+    """
+    s = df["admitted_raw"].astype(str).str.strip().str.lower()
+
+    mapping = {
+        "admission": 1,
+        "not admission": 0,
+        # extra robustness (won't hurt)
+        "1": 1,
+        "0": 0,
+        "true": 1,
+        "false": 0,
+        "yes": 1,
+        "no": 0,
+    }
+
+    df["admitted"] = s.map(mapping)
+
+    return df
+
+
 def basic_cleaning(df: pd.DataFrame) -> pd.DataFrame:
     df = df.drop_duplicates()
 
@@ -82,13 +108,18 @@ def basic_cleaning(df: pd.DataFrame) -> pd.DataFrame:
     df["age"] = pd.to_numeric(df["age"], errors="coerce")
     df["wait_time_minutes"] = pd.to_numeric(df["wait_time_minutes"], errors="coerce")
     df["satisfaction_score"] = pd.to_numeric(df["satisfaction_score"], errors="coerce")
-    df["admitted"] = pd.to_numeric(df["admitted"], errors="coerce")
+
+    # Map admitted flag from raw strings to 0/1
+    df = map_admission_flag(df)
 
     # Basic validity filters (adjust later if needed)
     df = df[(df["age"].isna()) | ((df["age"] >= 0) & (df["age"] <= 120))]
     df = df[(df["wait_time_minutes"].isna()) | (df["wait_time_minutes"] >= 0)]
-    df = df[(df["satisfaction_score"].isna()) | ((df["satisfaction_score"] >= 0) & (df["satisfaction_score"] <= 10))]
-    df = df[df["admitted"].isin([0, 1, 0.0, 1.0]) | df["admitted"].isna()]
+    df = df[
+        (df["satisfaction_score"].isna())
+        | ((df["satisfaction_score"] >= 0) & (df["satisfaction_score"] <= 10))
+    ]
+    df = df[df["admitted"].isin([0, 1]) | df["admitted"].isna()]
 
     # Strip categorical whitespace
     for col in ["gender", "race", "department"]:
@@ -108,10 +139,17 @@ def main() -> None:
     df = standardise_columns(df)
     df = parse_datetimes(df)
     df = basic_cleaning(df)
+
+    # Drop the raw admitted column after mapping (keep warehouse clean)
+    if "admitted_raw" in df.columns:
+        df = df.drop(columns=["admitted_raw"])
+
     save_processed(df)
 
     print("✅ Data ingestion complete")
     print(f"Rows: {len(df):,}")
+    print("Admitted value counts (including missing):")
+    print(df["admitted"].value_counts(dropna=False))
     print(f"Saved: {PROCESSED_DATA_PATH}")
 
 
