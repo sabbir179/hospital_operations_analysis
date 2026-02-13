@@ -19,8 +19,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the application code
 COPY app ./app
 COPY src ./src
-COPY models ./models
-COPY warehouse ./warehouse
+COPY sql ./sql
+
+# create folders so runtime download works
+RUN mkdir -p models warehouse
 
 # Expose port
 EXPOSE 8000

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
+from urllib.request import urlretrieve
+
 import joblib
 import pandas as pd
 from fastapi import FastAPI
@@ -34,13 +37,29 @@ class AdmissionResponse(BaseModel):
 model = None
 
 
+def ensure_model() -> None:
+    """Ensure model file exists locally; download it if needed."""
+    MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    if MODEL_PATH.exists():
+        return
+
+    model_url = os.getenv("MODEL_URL")
+    if not model_url:
+        raise RuntimeError(
+            "Model file is missing and MODEL_URL is not set. "
+            "Set MODEL_URL to a direct download link for admission_model.joblib."
+        )
+
+    print(f"⬇️ Downloading model from MODEL_URL to {MODEL_PATH} ...")
+    urlretrieve(model_url, MODEL_PATH)  # noqa: S310
+    print("✅ Model downloaded")
+
+
 @app.on_event("startup")
 def load_model():
     global model
-    if not MODEL_PATH.exists():
-        raise RuntimeError(
-            f"Model not found at {MODEL_PATH}. Run training first to create it."
-        )
+    ensure_model()
     model = joblib.load(MODEL_PATH)
 
 
@@ -51,7 +70,6 @@ def health():
 
 @app.post("/predict", response_model=AdmissionResponse)
 def predict(payload: AdmissionRequest):
-    # Convert request to a single-row DataFrame matching training feature names
     row = {
         "age": payload.age,
         "gender": payload.gender,
@@ -61,8 +79,8 @@ def predict(payload: AdmissionRequest):
         "event_dayofweek": payload.event_dayofweek,
         "wait_time_minutes": payload.wait_time_minutes,
     }
-    X = pd.DataFrame([row])
 
+    X = pd.DataFrame([row])
     proba = float(model.predict_proba(X)[:, 1][0])
     pred = int(proba >= 0.5)
 
