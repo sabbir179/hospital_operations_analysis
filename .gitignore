@@ -13,13 +13,19 @@ venv/
 # Data and models (never upload raw data)
 data/raw/*
 data/processed/*
-models/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
-!models/.gitkeep
+
 
 # Mac
 .DS_Store
+
+# models
+models/*
+!models/.gitkeep
+
+# local warehouse
+warehouse/*.duckdb
 
 # Logs
 *.log
