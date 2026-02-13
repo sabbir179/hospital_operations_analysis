@@ -3,6 +3,10 @@ import requests
 import pandas as pd
 import streamlit as st
 
+from datetime import datetime
+st.caption(f"Last refreshed: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
+
+
 API_BASE = os.getenv("API_BASE", "https://hospital-operations-analysis.onrender.com")
 
 st.set_page_config(page_title="Hospital Operations Dashboard", layout="wide")
@@ -12,11 +16,13 @@ st.caption("Metrics + admission prediction powered by FastAPI + DuckDB + ML mode
 # ---------------------------
 # Helpers
 # ---------------------------
+@st.cache_data(ttl=300)
 def get_json(path: str):
     url = f"{API_BASE}{path}"
     r = requests.get(url, timeout=30)
     r.raise_for_status()
     return r.json()
+
 
 def post_json(path: str, payload: dict):
     url = f"{API_BASE}{path}"
