@@ -4,6 +4,23 @@
 
 ---
 
+## 🚀 Live Deployment
+
+**Production API (FastAPI – Render):**  
+https://hospital-operations-analysis.onrender.com
+
+**Swagger API Documentation:**  
+https://hospital-operations-analysis.onrender.com/docs
+
+**Interactive Dashboard (Streamlit Cloud):**  
+https://hospitaloperationsanalysis.streamlit.app
+
+Backend: Dockerised FastAPI deployed on Render  
+Frontend: Streamlit deployed on Streamlit Cloud  
+Architecture: Medallion (Bronze → Silver → Gold)
+
+---
+
 # 1️⃣ Executive Summary
 
 This project demonstrates a production-oriented healthcare analytics and machine learning system designed to support hospital operational decision-making and patient admission risk prediction.
